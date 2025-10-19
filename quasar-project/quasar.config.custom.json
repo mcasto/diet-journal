@@ -1,0 +1,19 @@
+{
+  "extras": ["roboto-font", "material-icons", "fontawesome-v6"],
+  "vueRouterMode": "history",
+  "devServer": {
+    "port": "52471",
+    "open": {
+      "app": {
+        "name": "google chrome"
+      }
+    },
+    "proxy": {
+      "/api": {
+        "target": "http://[::1]:21073",
+        "changeOrigin": true
+      }
+    }
+  },
+  "plugins": ["Notify", "Meta", "Loading"]
+}

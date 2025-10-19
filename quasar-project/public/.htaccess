@@ -1,0 +1,13 @@
+DirectoryIndex index.html
+RewriteEngine On
+
+# 1. Handle static files first
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# 2. Explicit API routing (must come first)
+RewriteRule ^api/(.*)$ index.php [L]
+
+# 3. All other requests to index.html
+RewriteRule ^ index.html [L]
