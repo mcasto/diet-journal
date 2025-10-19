@@ -149,6 +149,8 @@ class FoodController extends Controller
 
     public function latest(Request $request, string $end)
     {
+        logger()->info($end);
+
         $user_id = $request->user()->id;
 
         $meal = Food::where('user_id', $user_id)

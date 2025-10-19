@@ -5,16 +5,20 @@
         Diet Journal
       </q-toolbar-title>
 
-      <q-input
-        type="date"
-        dense
-        outlined
-        label="View Date"
-        clearable
-        v-model="filterDate"
-      ></q-input>
+      <div class="row q-mr-xl">
+        <q-input
+          type="date"
+          dense
+          outlined
+          label="View Date"
+          clearable
+          v-model="filterDate"
+        ></q-input>
 
-      <q-btn icon="add" class="q-ml-md" :to="{ name: 'edit' }"></q-btn>
+        <q-btn icon="add" class="q-ml-md" :to="{ name: 'edit' }"></q-btn>
+      </div>
+
+      <q-btn icon="logout" flat round @click="logout"></q-btn>
     </q-toolbar>
     <q-table :rows="rows" :columns="columns">
       <template #body-cell-tools="{row}">
@@ -88,6 +92,11 @@ const rows = computed(() => {
     );
   });
 });
+
+const logout = () => {
+  store.user.token = null;
+  store.router.push({ name: "login" });
+};
 
 const deleteEntry = async (row) => {
   Notify.create({
