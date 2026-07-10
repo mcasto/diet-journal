@@ -40,6 +40,29 @@ const routes = [
         component: () => import("pages/EditEntry.vue"),
         name: "edit",
       },
+      {
+        path: "/calories",
+        component: () => import("pages/CaloriesPage.vue"),
+        name: "calories",
+        beforeEnter: async () => {
+          const store = useStore();
+          const response = await callApi({
+            path: "/food",
+            method: "get",
+            useAuth: true,
+          });
+
+          if (!response.status == "success") {
+            Notify.create({
+              type: "negative",
+              message: response.message,
+            });
+            return;
+          }
+
+          store.food = response.data;
+        },
+      },
     ],
     meta: { requireAuth: true },
   },

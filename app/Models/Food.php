@@ -15,4 +15,9 @@ class Food extends Model
     protected $casts = [
         'consumed_at' => 'datetime'
     ];
+
+    public function calorie()
+    {
+        return $this->belongsTo(Calorie::class, 'consumed', 'consumed');
+    }
 }

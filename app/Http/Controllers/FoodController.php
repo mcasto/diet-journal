@@ -15,13 +15,15 @@ class FoodController extends Controller
         try {
             return [
                 'status' => 'success',
-                'data' => Food::orderBy('consumed_at', 'desc')
+                'data' => Food::with('calorie')
+                    ->orderBy('consumed_at', 'desc')
                     ->get()
                     ->map(function ($rec) {
                         return [
                             'id' => $rec->id,
                             'consumed' => $rec->consumed,
-                            'consumed_at' => $rec->consumed_at
+                            'consumed_at' => $rec->consumed_at,
+                            'calories' => $rec->calorie->calories ?? null,
                         ];
                     })
             ];
