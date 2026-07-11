@@ -4,9 +4,16 @@
       <q-toolbar-title> Calories </q-toolbar-title>
     </q-toolbar>
 
-    <q-table :rows="rows" :columns="columns" row-key="consumed" dense>
+    <q-table
+      :rows="rows"
+      :columns="columns"
+      row-key="consumed"
+      dense
+      class="cursor-pointer"
+      @row-click="(evt, row) => loadRecipe(row)"
+    >
       <template #body-cell-calories="{ row }">
-        <q-td class="text-right">
+        <q-td class="text-right" @click.stop>
           <q-input
             type="number"
             dense
@@ -23,7 +30,10 @@
     <div class="row q-col-gutter-lg q-mt-lg">
       <div class="col-12 col-md-6" style="max-width: 600px;">
         <q-card class="q-pa-md">
-          <div class="text-h6 q-mb-md">Calorie Calculator</div>
+          <div class="text-h6">Calorie Calculator</div>
+          <div class="text-caption text-grey q-mb-md">
+            Click a row in the table above to load and edit its recipe.
+          </div>
 
           <q-select
             dense
@@ -266,6 +276,46 @@ const removeIngredient = (index) => {
   ingredients.value.splice(index, 1);
 };
 
+const loadRecipe = async (row) => {
+  selectedFood.value = row.consumed;
+
+  const response = await callApi({
+    path: "/recipes",
+    method: "get",
+    payload: { consumed: encodeURIComponent(row.consumed) },
+    useAuth: true,
+  });
+
+  if (response.status != "success") {
+    Notify.create({
+      type: "negative",
+      position: "center",
+      message: response.message || "Unable to load recipe.",
+    });
+    return;
+  }
+
+  ingredients.value = response.data.map((item) => ({
+    name: item.ingredient,
+    calories: item.calories,
+  }));
+};
+
+const saveRecipe = async (consumed) => {
+  await callApi({
+    path: "/recipes",
+    method: "put",
+    payload: {
+      consumed,
+      ingredients: ingredients.value.map((item) => ({
+        ingredient: item.name,
+        calories: item.calories,
+      })),
+    },
+    useAuth: true,
+  });
+};
+
 const calculate = async () => {
   const row = rows.value.find((row) => row.consumed === selectedFood.value);
   if (!row) {
@@ -274,7 +324,9 @@ const calculate = async () => {
 
   row.calories = totalCalories.value;
   await saveCalories(row);
+  await saveRecipe(row.consumed);
 
   ingredients.value = [];
+  selectedFood.value = null;
 };
 </script>

@@ -10,6 +10,7 @@
     "test": "echo \"No test specified\" && exit 0",
     "dev": "quasar dev",
     "build": "quasar build",
+    "deploy": "bash deploy.sh",
     "postinstall": "quasar prepare",
     "push": "npm version patch && git push",
     "push-minor": "npm version minor && git push",

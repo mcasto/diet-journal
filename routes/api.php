@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CaloriesController;
 use App\Http\Controllers\FoodController;
+use App\Http\Controllers\RecipesController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -31,6 +32,15 @@ Route::controller(CaloriesController::class)
     ->prefix('/calories')
     ->middleware("auth:sanctum")
     ->group(function () {
+        Route::put('', 'update');
+    })
+;
+
+Route::controller(RecipesController::class)
+    ->prefix('/recipes')
+    ->middleware("auth:sanctum")
+    ->group(function () {
+        Route::get('{consumed}', 'show');
         Route::put('', 'update');
     })
 ;
