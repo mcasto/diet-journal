@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Calorie;
 use App\Models\Food;
 use Carbon\Carbon;
 use Exception;
@@ -11,13 +12,25 @@ use Illuminate\Support\Facades\Validator;
 
 class FoodController extends Controller
 {
-    private function formatFood(Food $rec)
+    /**
+     * Keyed by lowercased `consumed` name. Eloquent's own relation-matching
+     * for `Food::with('calorie')` compares keys with exact PHP string
+     * equality, which is case-sensitive even though the DB collation isn't —
+     * so calorie lookups are done against this map instead.
+     */
+    private function calorieMap()
+    {
+        return Calorie::get(['consumed', 'calories'])
+            ->keyBy(fn ($c) => mb_strtolower($c->consumed));
+    }
+
+    private function formatFood(Food $rec, $calorieMap)
     {
         return [
             'id' => $rec->id,
             'consumed' => $rec->consumed,
             'consumed_at' => $rec->consumed_at,
-            'calories' => $rec->calorie->calories ?? null,
+            'calories' => optional($calorieMap->get(mb_strtolower($rec->consumed)))->calories,
         ];
     }
 
@@ -26,6 +39,8 @@ class FoodController extends Controller
         $timezone = 'America/Guayaquil';
 
         try {
+            $calorieMap = $this->calorieMap();
+
             // Range mode: pulls an unpaginated span of days (e.g. the Calories
             // page's past-month view), rather than a single day of entries.
             if ($request->filled('from') || $request->filled('to')) {
@@ -37,11 +52,10 @@ class FoodController extends Controller
                     ? Carbon::parse($request->query('to'), $timezone)->endOfDay()
                     : Carbon::now($timezone)->endOfDay();
 
-                $data = Food::with('calorie')
-                    ->whereBetween('consumed_at', [$from->setTimezone('UTC'), $to->setTimezone('UTC')])
+                $data = Food::whereBetween('consumed_at', [$from->setTimezone('UTC'), $to->setTimezone('UTC')])
                     ->orderBy('consumed_at', 'desc')
                     ->get()
-                    ->map(fn ($rec) => $this->formatFood($rec));
+                    ->map(fn ($rec) => $this->formatFood($rec, $calorieMap));
 
                 return ['status' => 'success', 'data' => $data];
             }
@@ -56,18 +70,17 @@ class FoodController extends Controller
             $start = $date->copy()->startOfDay()->setTimezone('UTC');
             $end = $date->copy()->endOfDay()->setTimezone('UTC');
 
-            $day = Food::with('calorie')
-                ->whereBetween('consumed_at', [$start, $end])
+            $day = Food::whereBetween('consumed_at', [$start, $end])
                 ->orderBy('consumed_at', 'desc')
                 ->get();
 
-            $dailyCalories = $day->sum(fn ($rec) => $rec->calorie->calories ?? 0);
+            $dailyCalories = $day->sum(fn ($rec) => optional($calorieMap->get(mb_strtolower($rec->consumed)))->calories ?? 0);
 
             $perPage = (int) $request->query('per_page', 10);
             $page = (int) $request->query('page', 1);
 
             $paginator = new LengthAwarePaginator(
-                $day->forPage($page, $perPage)->map(fn ($rec) => $this->formatFood($rec))->values(),
+                $day->forPage($page, $perPage)->map(fn ($rec) => $this->formatFood($rec, $calorieMap))->values(),
                 $day->count(),
                 $perPage,
                 $page,
@@ -88,13 +101,13 @@ class FoodController extends Controller
 
     public function show(int $id)
     {
-        $rec = Food::with('calorie')->find($id);
+        $rec = Food::find($id);
 
         if (!$rec) {
             return ['status' => 404, 'message' => 'Record not found.'];
         }
 
-        return ['status' => 'success', 'rec' => $this->formatFood($rec)];
+        return ['status' => 'success', 'rec' => $this->formatFood($rec, $this->calorieMap())];
     }
 
     public function store(Request $request)

@@ -167,7 +167,7 @@ const rows = computed(() => {
     (item) => new Date(item.consumed_at) >= cutoff,
   );
 
-  const groups = groupBy(recent, "consumed");
+  const groups = groupBy(recent, (item) => item.consumed.toLowerCase());
 
   return Object.values(groups)
     .map((entries) =>
@@ -205,9 +205,12 @@ const saveCalories = async (row) => {
     return;
   }
 
-  // Every entry with the same `consumed` name shares one calorie value.
+  // Every entry with the same `consumed` name (case-insensitively) shares
+  // one calorie value.
   store.food = store.food.map((item) =>
-    item.consumed === row.consumed ? { ...item, calories: row.calories } : item,
+    item.consumed.toLowerCase() === row.consumed.toLowerCase()
+      ? { ...item, calories: row.calories }
+      : item,
   );
 };
 

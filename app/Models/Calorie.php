@@ -10,9 +10,4 @@ class Calorie extends Model
         'consumed',
         'calories',
     ];
-
-    public function foods()
-    {
-        return $this->hasMany(Food::class, 'consumed', 'consumed');
-    }
 }
