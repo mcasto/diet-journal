@@ -6,6 +6,7 @@ use App\Models\Food;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Validator;
 
 class FoodController extends Controller
@@ -45,7 +46,9 @@ class FoodController extends Controller
                 return ['status' => 'success', 'data' => $data];
             }
 
-            // Day mode (Food Log): defaults to today, paginated.
+            // Day mode (Food Log): defaults to today, paginated. Pulled as a
+            // single day-scoped collection so the daily total reflects the
+            // whole day, not just whichever page is currently displayed.
             $date = $request->filled('date')
                 ? Carbon::parse($request->query('date'), $timezone)
                 : Carbon::now($timezone);
@@ -53,17 +56,28 @@ class FoodController extends Controller
             $start = $date->copy()->startOfDay()->setTimezone('UTC');
             $end = $date->copy()->endOfDay()->setTimezone('UTC');
 
-            $paginator = Food::with('calorie')
+            $day = Food::with('calorie')
                 ->whereBetween('consumed_at', [$start, $end])
                 ->orderBy('consumed_at', 'desc')
-                ->paginate(
-                    perPage: (int) $request->query('per_page', 10),
-                    page: (int) $request->query('page', 1),
-                );
+                ->get();
 
-            $paginator->getCollection()->transform(fn ($rec) => $this->formatFood($rec));
+            $dailyCalories = $day->sum(fn ($rec) => $rec->calorie->calories ?? 0);
 
-            return ['status' => 'success', ...$paginator->toArray()];
+            $perPage = (int) $request->query('per_page', 10);
+            $page = (int) $request->query('page', 1);
+
+            $paginator = new LengthAwarePaginator(
+                $day->forPage($page, $perPage)->map(fn ($rec) => $this->formatFood($rec))->values(),
+                $day->count(),
+                $perPage,
+                $page,
+            );
+
+            return [
+                'status' => 'success',
+                'daily_calories' => $dailyCalories,
+                ...$paginator->toArray(),
+            ];
         } catch (Exception $e) {
             return [
                 'status' => 'error',

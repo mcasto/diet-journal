@@ -6,6 +6,12 @@
       </q-toolbar-title>
 
       <div class="row q-mr-xl">
+        <q-btn
+          icon="mdi-chevron-left"
+          flat
+          round
+          @click="shiftFilterDate(-1)"
+        ></q-btn>
         <q-input
           type="date"
           dense
@@ -14,6 +20,13 @@
           v-model="filterDate"
           @update:model-value="onFilterDateChange"
         ></q-input>
+        <q-btn
+          icon="mdi-chevron-right"
+          flat
+          round
+          :disable="isCurrentDate"
+          @click="shiftFilterDate(1)"
+        ></q-btn>
 
         <q-btn icon="add" class="q-ml-md" :to="{ name: 'edit' }"></q-btn>
       </div>
@@ -26,34 +39,53 @@
       row-key="id"
       @request="onRequest"
     >
-      <template #body-cell-tools="{row}">
-        <q-td class="text-right">
-          <q-btn icon="delete" @click="deleteEntry(row)"></q-btn>
-          <q-btn
-            icon="edit"
-            :to="{ name: 'edit', params: { id: row.id } }"
-          ></q-btn>
-        </q-td>
+      <template #body="props">
+        <q-tr
+          :props="props"
+          :class="{
+            'bg-warning':
+              props.row.calories === null || props.row.calories === undefined,
+          }"
+        >
+          <q-td v-for="col in props.cols" :key="col.name" :props="props">
+            <template v-if="col.name === 'tools'">
+              <q-btn icon="delete" @click="deleteEntry(props.row)"></q-btn>
+              <q-btn
+                icon="edit"
+                :to="{ name: 'edit', params: { id: props.row.id } }"
+              ></q-btn>
+            </template>
+            <template v-else>{{ col.value }}</template>
+          </q-td>
+        </q-tr>
       </template>
     </q-table>
+
+    <div class="text-h6 q-mt-md text-center">
+      Daily Calories: {{ dailyCalories }} cal
+    </div>
   </div>
 </template>
 
 <script setup>
 import {
+  addDays,
   format,
   formatDuration,
   formatISO9075,
   intervalToDuration,
+  isToday,
   parseISO,
 } from "date-fns";
 import { Notify } from "quasar";
 import callApi from "src/assets/call-api";
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 
 const filterDate = ref(formatISO9075(new Date(), { representation: "date" }));
+const isCurrentDate = computed(() => isToday(parseISO(filterDate.value)));
 const rows = ref([]);
 const loading = ref(false);
+const dailyCalories = ref(0);
 const pagination = ref({
   page: 1,
   rowsPerPage: 10,
@@ -68,6 +100,7 @@ const columns = [
   },
   {
     label: "Logged",
+    name: "logged",
     field: (row) => {
       return format(new Date(row.consumed_at), "PPpp");
     },
@@ -108,6 +141,7 @@ const onRequest = async ({ pagination: requested }) => {
   }
 
   rows.value = response.data;
+  dailyCalories.value = response.daily_calories;
   pagination.value = {
     page: response.current_page,
     rowsPerPage: response.per_page,
@@ -117,6 +151,13 @@ const onRequest = async ({ pagination: requested }) => {
 
 const onFilterDateChange = () => {
   onRequest({ pagination: { ...pagination.value, page: 1 } });
+};
+
+const shiftFilterDate = (days) => {
+  filterDate.value = formatISO9075(addDays(parseISO(filterDate.value), days), {
+    representation: "date",
+  });
+  onFilterDateChange();
 };
 
 onMounted(() => {
