@@ -22,9 +22,10 @@ Route::controller(FoodController::class)
     ->group(function () {
         Route::get('', 'index');
         Route::post('', 'store');
+        Route::get('latest/{end}', 'latest');
+        Route::get('{id}', 'show');
         Route::put('{id}', 'update');
         Route::delete('{id}', 'destroy');
-        Route::get('latest/{end}', 'latest');
     })
 ;
 

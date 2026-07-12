@@ -82,37 +82,42 @@ const onSubmit = async () => {
     return;
   }
 
-  if (method == "put") {
-    store.food = store.food.map((entry) => {
-      return entry.id == response.rec.id ? response.rec : entry;
-    });
-  }
-
-  if (method == "post") {
-    store.food.unshift(response.rec);
-  }
-
   store.router.push({ name: "home" });
 };
 
-onMounted(() => {
-  const item = store.food.find(({ id }) => id == route.params.id);
-
-  if (item) {
-    // JavaScript will automatically handle timezone conversion
-    const localDate = new Date(item.consumed_at);
-
-    entry.value = {
-      ...item,
-      date: formatISO9075(localDate, { representation: "date" }),
-      time: formatISO9075(localDate, { representation: "time" }),
-    };
-  } else {
+onMounted(async () => {
+  if (!route.params.id) {
     entry.value = {
       consumed: null,
       date: formatISO9075(new Date(), { representation: "date" }),
       time: formatISO9075(new Date(), { representation: "time" }),
     };
+    return;
   }
+
+  const response = await callApi({
+    path: `/food/${route.params.id}`,
+    method: "get",
+    useAuth: true,
+  });
+
+  if (response.status != "success") {
+    Notify.create({
+      type: "negative",
+      position: "center",
+      message: response.message || "Unable to load entry.",
+    });
+    store.router.push({ name: "home" });
+    return;
+  }
+
+  // JavaScript will automatically handle timezone conversion
+  const localDate = new Date(response.rec.consumed_at);
+
+  entry.value = {
+    ...response.rec,
+    date: formatISO9075(localDate, { representation: "date" }),
+    time: formatISO9075(localDate, { representation: "time" }),
+  };
 });
 </script>

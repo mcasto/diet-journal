@@ -1,3 +1,4 @@
+import { formatISO9075, subMonths } from "date-fns";
 import { Notify } from "quasar";
 import callApi from "src/assets/call-api";
 import { useStore } from "src/stores/store";
@@ -16,24 +17,6 @@ const routes = [
         path: "",
         component: () => import("pages/IndexPage.vue"),
         name: "home",
-        beforeEnter: async () => {
-          const store = useStore();
-          const response = await callApi({
-            path: "/food",
-            method: "get",
-            useAuth: true,
-          });
-
-          if (!response.status == "success") {
-            Notify.create({
-              type: "negative",
-              message: response.message,
-            });
-            return;
-          }
-
-          store.food = response.data;
-        },
       },
       {
         path: "/edit/:id?",
@@ -46,8 +29,9 @@ const routes = [
         name: "calories",
         beforeEnter: async () => {
           const store = useStore();
+          const today = new Date();
           const response = await callApi({
-            path: "/food",
+            path: `/food?from=${formatISO9075(subMonths(today, 1), { representation: "date" })}&to=${formatISO9075(today, { representation: "date" })}`,
             method: "get",
             useAuth: true,
           });

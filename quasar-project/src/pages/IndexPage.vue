@@ -11,14 +11,21 @@
           dense
           outlined
           label="View Date"
-          clearable
           v-model="filterDate"
+          @update:model-value="onFilterDateChange"
         ></q-input>
 
         <q-btn icon="add" class="q-ml-md" :to="{ name: 'edit' }"></q-btn>
       </div>
     </q-toolbar>
-    <q-table :rows="rows" :columns="columns">
+    <q-table
+      :rows="rows"
+      :columns="columns"
+      :loading="loading"
+      v-model:pagination="pagination"
+      row-key="id"
+      @request="onRequest"
+    >
       <template #body-cell-tools="{row}">
         <q-td class="text-right">
           <q-btn icon="delete" @click="deleteEntry(row)"></q-btn>
@@ -40,15 +47,18 @@ import {
   intervalToDuration,
   parseISO,
 } from "date-fns";
-import { remove } from "lodash-es";
 import { Notify } from "quasar";
 import callApi from "src/assets/call-api";
-import { useStore } from "src/stores/store";
-import { computed, ref } from "vue";
+import { onMounted, ref } from "vue";
 
-const store = useStore();
-
-const filterDate = ref(null);
+const filterDate = ref(formatISO9075(new Date(), { representation: "date" }));
+const rows = ref([]);
+const loading = ref(false);
+const pagination = ref({
+  page: 1,
+  rowsPerPage: 10,
+  rowsNumber: 0,
+});
 
 const columns = [
   {
@@ -78,17 +88,39 @@ const columns = [
   },
 ];
 
-const rows = computed(() => {
-  if (!filterDate.value) {
-    return store.food;
+const onRequest = async ({ pagination: requested }) => {
+  loading.value = true;
+
+  const response = await callApi({
+    path: `/food?date=${filterDate.value}&page=${requested.page}&per_page=${requested.rowsPerPage}`,
+    method: "get",
+    useAuth: true,
+  });
+
+  loading.value = false;
+
+  if (response.status != "success") {
+    Notify.create({
+      type: "negative",
+      message: response.message,
+    });
+    return;
   }
 
-  return store.food.filter((item) => {
-    return (
-      formatISO9075(parseISO(item.consumed_at), { representation: "date" }) ==
-      filterDate.value
-    );
-  });
+  rows.value = response.data;
+  pagination.value = {
+    page: response.current_page,
+    rowsPerPage: response.per_page,
+    rowsNumber: response.total,
+  };
+};
+
+const onFilterDateChange = () => {
+  onRequest({ pagination: { ...pagination.value, page: 1 } });
+};
+
+onMounted(() => {
+  onRequest({ pagination: pagination.value });
 });
 
 const deleteEntry = async (row) => {
@@ -118,7 +150,7 @@ const deleteEntry = async (row) => {
             return;
           }
 
-          remove(store.food, ({ id }) => id == row.id);
+          onRequest({ pagination: pagination.value });
         },
       },
     ],
