@@ -4,13 +4,41 @@
       <q-toolbar-title> Calories </q-toolbar-title>
     </q-toolbar>
 
+    <div class="row items-start q-col-gutter-sm q-mb-md">
+      <div class="col-12 col-md-6" style="max-width: 400px;">
+        <q-input
+          dense
+          outlined
+          clearable
+          label="Search all food history"
+          v-model="foodSearchQuery"
+          @keyup.enter="searchFood"
+          @clear="foodSearchResult = null"
+        >
+          <template #append>
+            <q-icon name="search" class="cursor-pointer" @click="searchFood"></q-icon>
+          </template>
+        </q-input>
+        <div v-if="foodSearchResult" class="text-caption q-mt-xs">
+          Found "{{ foodSearchResult.consumed }}", last eaten
+          {{ format(new Date(foodSearchResult.consumed_at), "PPp") }} —
+          {{
+            foodSearchResult.calories === null ||
+            foodSearchResult.calories === undefined
+              ? "no calories logged yet"
+              : `${foodSearchResult.calories} cal`
+          }}. Loaded into the calculator below.
+        </div>
+      </div>
+    </div>
+
     <q-table
       :rows="rows"
       :columns="columns"
       row-key="consumed"
       dense
       class="cursor-pointer"
-      @row-click="(evt, row) => loadRecipe(row)"
+      @row-click="(evt, row) => loadRecipe(row.consumed)"
     >
       <template #body-cell-calories="{ row }">
         <q-td class="text-right" @click.stop>
@@ -279,13 +307,50 @@ const removeIngredient = (index) => {
   ingredients.value.splice(index, 1);
 };
 
-const loadRecipe = async (row) => {
-  selectedFood.value = row.consumed;
+const foodSearchQuery = ref("");
+const foodSearchResult = ref(null);
+
+const searchFood = async () => {
+  const query = foodSearchQuery.value?.trim();
+  if (!query) {
+    return;
+  }
+
+  const response = await callApi({
+    path: `/food/search?q=${encodeURIComponent(query)}`,
+    method: "get",
+    useAuth: true,
+  });
+
+  if (response.status != "success") {
+    Notify.create({
+      type: "negative",
+      position: "center",
+      message: response.message || "Unable to search for food.",
+    });
+    return;
+  }
+
+  if (!response.found) {
+    foodSearchResult.value = null;
+    Notify.create({
+      type: "warning",
+      message: `No food found matching "${query}".`,
+    });
+    return;
+  }
+
+  foodSearchResult.value = response.rec;
+  await loadRecipe(response.rec.consumed);
+};
+
+const loadRecipe = async (consumed) => {
+  selectedFood.value = consumed;
 
   const response = await callApi({
     path: "/recipes",
     method: "get",
-    payload: { consumed: encodeURIComponent(row.consumed) },
+    payload: { consumed: encodeURIComponent(consumed) },
     useAuth: true,
   });
 
@@ -320,16 +385,16 @@ const saveRecipe = async (consumed) => {
 };
 
 const calculate = async () => {
-  const row = rows.value.find((row) => row.consumed === selectedFood.value);
-  if (!row) {
+  if (!selectedFood.value) {
     return;
   }
 
-  row.calories = totalCalories.value;
-  await saveCalories(row);
-  await saveRecipe(row.consumed);
+  const consumed = selectedFood.value;
+  await saveCalories({ consumed, calories: totalCalories.value });
+  await saveRecipe(consumed);
 
   ingredients.value = [];
   selectedFood.value = null;
+  foodSearchResult.value = null;
 };
 </script>

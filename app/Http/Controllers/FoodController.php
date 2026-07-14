@@ -99,6 +99,37 @@ class FoodController extends Controller
         }
     }
 
+    /**
+     * Look up a food by exact name (case-insensitive) across all history,
+     * not just the past-month window `index` uses for the Calories page.
+     */
+    public function search(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'q' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return ['status' => 401, 'message' => 'Malformed request.'];
+        }
+
+        $term = $validator->valid()['q'];
+
+        $rec = Food::whereRaw('LOWER(consumed) = ?', [mb_strtolower($term)])
+            ->orderBy('consumed_at', 'desc')
+            ->first();
+
+        if (!$rec) {
+            return ['status' => 'success', 'found' => false];
+        }
+
+        return [
+            'status' => 'success',
+            'found' => true,
+            'rec' => $this->formatFood($rec, $this->calorieMap()),
+        ];
+    }
+
     public function show(int $id)
     {
         $rec = Food::find($id);

@@ -23,6 +23,7 @@ Route::controller(FoodController::class)
         Route::get('', 'index');
         Route::post('', 'store');
         Route::get('latest/{end}', 'latest');
+        Route::get('search', 'search');
         Route::get('{id}', 'show');
         Route::put('{id}', 'update');
         Route::delete('{id}', 'destroy');
