@@ -21,7 +21,7 @@ class FoodController extends Controller
     private function calorieMap()
     {
         return Calorie::get(['consumed', 'calories'])
-            ->keyBy(fn ($c) => mb_strtolower($c->consumed));
+            ->keyBy(fn($c) => mb_strtolower($c->consumed));
     }
 
     private function formatFood(Food $rec, $calorieMap)
@@ -55,7 +55,7 @@ class FoodController extends Controller
                 $data = Food::whereBetween('consumed_at', [$from->setTimezone('UTC'), $to->setTimezone('UTC')])
                     ->orderBy('consumed_at', 'desc')
                     ->get()
-                    ->map(fn ($rec) => $this->formatFood($rec, $calorieMap));
+                    ->map(fn($rec) => $this->formatFood($rec, $calorieMap));
 
                 return ['status' => 'success', 'data' => $data];
             }
@@ -74,13 +74,13 @@ class FoodController extends Controller
                 ->orderBy('consumed_at', 'desc')
                 ->get();
 
-            $dailyCalories = $day->sum(fn ($rec) => optional($calorieMap->get(mb_strtolower($rec->consumed)))->calories ?? 0);
+            $dailyCalories = $day->sum(fn($rec) => optional($calorieMap->get(mb_strtolower($rec->consumed)))->calories ?? 0);
 
             $perPage = (int) $request->query('per_page', 10);
             $page = (int) $request->query('page', 1);
 
             $paginator = new LengthAwarePaginator(
-                $day->forPage($page, $perPage)->map(fn ($rec) => $this->formatFood($rec, $calorieMap))->values(),
+                $day->forPage($page, $perPage)->map(fn($rec) => $this->formatFood($rec, $calorieMap))->values(),
                 $day->count(),
                 $perPage,
                 $page,
@@ -135,7 +135,11 @@ class FoodController extends Controller
 
         $rec->save();
 
-        return ['status' => 'success', 'rec' => $rec];
+        // mc-todo:
+        // get calories by `consumed`
+        // if calories exist, then return
+
+        return ['status' => 'success', 'rec' => $rec, 'response' => 'This is a test'];
     }
 
     public function update(Request $request, int $id)
