@@ -184,7 +184,9 @@ class FoodController extends Controller
             ->get()
             ->sum(fn($food) => optional($calorieMap->get(mb_strtolower($food->consumed)))->calories ?? 0);
 
-        $response = "{$rec->consumed} logged for {$calories} calories. {$totalCalories} total calories consumed today.";
+        $remaining = (new CaloriesController())->remaining();
+
+        $response = "{$rec->consumed} logged for {$calories} calories. {$remaining} calories remaining.";
 
         return ['status' => 'success', 'rec' => $rec, 'response' => $response];
     }

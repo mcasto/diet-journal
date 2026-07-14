@@ -6,6 +6,7 @@ use App\Http\Controllers\FoodController;
 use App\Http\Controllers\RecipesController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 
 Route::controller(AuthController::class)
     ->group(function () {
@@ -37,6 +38,23 @@ Route::controller(CaloriesController::class)
         Route::put('', 'update');
     })
 ;
+
+Route::get('/weight', function () {
+    $config = json_decode(Storage::disk('local')->get('config.json'));
+
+    return round($config->weight * 2.204623);
+});
+
+Route::post('/weight', function (Request $request) {
+    $config = json_decode(Storage::disk('local')->get('config.json'));
+
+    $config->weight = round($request->input('weight') / 2.204623, 2);
+
+    Storage::disk('local')->put('config.json', json_encode($config));
+});
+
+Route::get('/bmr', [CaloriesController::class, 'bmr']);
+Route::get('/calories/remaining', [CaloriesController::class, 'remaining']);
 
 Route::controller(RecipesController::class)
     ->prefix('/recipes')

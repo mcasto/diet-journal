@@ -61,8 +61,9 @@
       </template>
     </q-table>
 
-    <div class="text-h6 q-mt-md text-center">
-      Daily Calories: {{ dailyCalories }} cal
+    <div class="text-h6 q-mt-md flex justify-between q-mx-lg">
+      <div>Daily Calories: {{ dailyCalories }} cal</div>
+      <div>Remaining Calories: {{ remaining }} cal</div>
     </div>
   </div>
 </template>
@@ -86,6 +87,7 @@ const isCurrentDate = computed(() => isToday(parseISO(filterDate.value)));
 const rows = ref([]);
 const loading = ref(false);
 const dailyCalories = ref(0);
+const remaining = ref(0);
 const pagination = ref({
   page: 1,
   rowsPerPage: 10,
@@ -149,6 +151,14 @@ const onRequest = async ({ pagination: requested }) => {
   };
 };
 
+const fetchRemaining = async () => {
+  remaining.value = await callApi({
+    path: "/calories/remaining",
+    method: "get",
+    useAuth: true,
+  });
+};
+
 const onFilterDateChange = () => {
   onRequest({ pagination: { ...pagination.value, page: 1 } });
 };
@@ -162,6 +172,7 @@ const shiftFilterDate = (days) => {
 
 onMounted(() => {
   onRequest({ pagination: pagination.value });
+  fetchRemaining();
 });
 
 const deleteEntry = async (row) => {
@@ -192,6 +203,7 @@ const deleteEntry = async (row) => {
           }
 
           onRequest({ pagination: pagination.value });
+          fetchRemaining();
         },
       },
     ],
