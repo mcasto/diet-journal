@@ -135,11 +135,27 @@ class FoodController extends Controller
 
         $rec->save();
 
-        // mc-todo:
         // get calories by `consumed`
-        // if calories exist, then return
+        $calRec = Calorie::whereRaw('LOWER(consumed) = ?', strtolower($rec->consumed))
+            ->first();
 
-        return ['status' => 'success', 'rec' => $rec, 'response' => 'This is a test'];
+        $calories = $calRec->calories ?? 'unknown';
+
+        // retrieve total calories consumed today
+        $timezone = 'America/Guayaquil';
+        $today = Carbon::now($timezone);
+        $calorieMap = $this->calorieMap();
+
+        $totalCalories = Food::whereBetween('consumed_at', [
+            $today->copy()->startOfDay()->setTimezone('UTC'),
+            $today->copy()->endOfDay()->setTimezone('UTC'),
+        ])
+            ->get()
+            ->sum(fn($food) => optional($calorieMap->get(mb_strtolower($food->consumed)))->calories ?? 0);
+
+        $response = "{$rec->consumed} logged for {$calories} calories. {$totalCalories} total calories consumed today.";
+
+        return ['status' => 'success', 'rec' => $rec, 'response' => $response];
     }
 
     public function update(Request $request, int $id)
