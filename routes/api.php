@@ -7,6 +7,8 @@ use App\Http\Controllers\RecipesController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 Route::controller(AuthController::class)
     ->group(function () {
@@ -42,15 +44,36 @@ Route::controller(CaloriesController::class)
 Route::get('/weight', function () {
     $config = json_decode(Storage::disk('local')->get('config.json'));
 
-    return round($config->weight * 2.204623);
+    return [
+        'status' => 'success',
+        'weight' => round($config->weight * 2.204623),
+        'target' => $config->target,
+    ];
 });
 
 Route::post('/weight', function (Request $request) {
     $config = json_decode(Storage::disk('local')->get('config.json'));
 
-    $config->weight = round($request->input('weight') / 2.204623, 2);
+    $validator = Validator::make($request->all(), [
+        'weight' => 'required|numeric|min:0',
+        'target' => ['nullable', 'string', Rule::in(array_keys(get_object_vars($config->targets)))],
+    ]);
+
+    if ($validator->fails()) {
+        return ['status' => 401, 'message' => 'Malformed request.'];
+    }
+
+    $valid = $validator->valid();
+
+    $config->weight = round($valid['weight'] / 2.204623, 2);
+
+    if (isset($valid['target'])) {
+        $config->target = $valid['target'];
+    }
 
     Storage::disk('local')->put('config.json', json_encode($config));
+
+    return ['status' => 'success'];
 });
 
 Route::get('/bmr', [CaloriesController::class, 'bmr']);

@@ -47,7 +47,7 @@ class CaloriesController extends Controller
 
         $bmr = $base * $config->exerciseLevels[$config->exercise];
 
-        return $bmr;
+        return ceil($bmr * $config->targets->{$config->target});
     }
 
     public function remaining()
