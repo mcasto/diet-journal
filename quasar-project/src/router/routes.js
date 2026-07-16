@@ -24,6 +24,11 @@ const routes = [
         name: "edit",
       },
       {
+        path: "/profile",
+        component: () => import("pages/ProfilePage.vue"),
+        name: "profile",
+      },
+      {
         path: "/calories",
         component: () => import("pages/CaloriesPage.vue"),
         name: "calories",

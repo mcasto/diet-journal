@@ -2,13 +2,12 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CaloriesController;
+use App\Http\Controllers\ConfigController;
 use App\Http\Controllers\FoodController;
 use App\Http\Controllers\RecipesController;
+use App\Models\Config;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
 
 Route::controller(AuthController::class)
     ->group(function () {
@@ -41,8 +40,8 @@ Route::controller(CaloriesController::class)
     })
 ;
 
-Route::get('/weight', function () {
-    $config = json_decode(Storage::disk('local')->get('config.json'));
+Route::middleware('auth:sanctum')->get('/weight', function (Request $request) {
+    $config = Config::firstOrCreate(['user_id' => $request->user()->id])->refresh();
 
     return [
         'status' => 'success',
@@ -51,33 +50,16 @@ Route::get('/weight', function () {
     ];
 });
 
-Route::post('/weight', function (Request $request) {
-    $config = json_decode(Storage::disk('local')->get('config.json'));
+Route::middleware("auth:sanctum")->get('/calories/remaining', [CaloriesController::class, 'remaining']);
 
-    $validator = Validator::make($request->all(), [
-        'weight' => 'required|numeric|min:0',
-        'target' => ['nullable', 'string', Rule::in(array_keys(get_object_vars($config->targets)))],
-    ]);
-
-    if ($validator->fails()) {
-        return ['status' => 401, 'message' => 'Malformed request.'];
-    }
-
-    $valid = $validator->valid();
-
-    $config->weight = round($valid['weight'] / 2.204623, 2);
-
-    if (isset($valid['target'])) {
-        $config->target = $valid['target'];
-    }
-
-    Storage::disk('local')->put('config.json', json_encode($config));
-
-    return ['status' => 'success'];
-});
-
-Route::get('/bmr', [CaloriesController::class, 'bmr']);
-Route::get('/calories/remaining', [CaloriesController::class, 'remaining']);
+Route::controller(ConfigController::class)
+    ->prefix('/profile')
+    ->middleware("auth:sanctum")
+    ->group(function () {
+        Route::get('', 'show');
+        Route::put('', 'update');
+    })
+;
 
 Route::controller(RecipesController::class)
     ->prefix('/recipes')

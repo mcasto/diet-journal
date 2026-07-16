@@ -7,6 +7,7 @@
         <q-tabs shrink>
           <q-route-tab :to="{ name: 'home' }" label="Food Log" />
           <q-route-tab :to="{ name: 'calories' }" label="Calories" />
+          <q-route-tab :to="{ name: 'profile' }" label="Profile" />
         </q-tabs>
 
         <q-btn icon="logout" flat round class="q-ml-md" @click="logout"></q-btn>

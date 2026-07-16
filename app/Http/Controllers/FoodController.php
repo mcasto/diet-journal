@@ -172,19 +172,7 @@ class FoodController extends Controller
 
         $calories = $calRec->calories ?? 'unknown';
 
-        // retrieve total calories consumed today
-        $timezone = 'America/Guayaquil';
-        $today = Carbon::now($timezone);
-        $calorieMap = $this->calorieMap();
-
-        $totalCalories = Food::whereBetween('consumed_at', [
-            $today->copy()->startOfDay()->setTimezone('UTC'),
-            $today->copy()->endOfDay()->setTimezone('UTC'),
-        ])
-            ->get()
-            ->sum(fn($food) => optional($calorieMap->get(mb_strtolower($food->consumed)))->calories ?? 0);
-
-        $remaining = (new CaloriesController())->remaining();
+        $remaining = (new CaloriesController())->remaining($request);
 
         $response = "{$rec->consumed} logged for {$calories} calories. {$remaining} calories remaining.";
 
