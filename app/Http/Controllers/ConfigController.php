@@ -12,14 +12,14 @@ class ConfigController extends Controller
 {
     public function show(Request $request)
     {
-        $config = Config::firstOrCreate(['user_id' => $request->user()->id])->refresh();
+        $config = Config::forUser($request->user()->id);
         $globalConfig = json_decode(Storage::disk('local')->get('global-config.json'));
 
         return [
             'status' => 'success',
             'sex' => $config->sex,
             'height' => round($config->height / 2.54, 1),
-            'weight' => round($config->weight * 2.204623),
+            'weight' => round($config->latestWeight->weight * 2.204623),
             'birthdate' => $config->birthdate->format('Y-m-d'),
             'exercise' => $config->exercise,
             'target' => $config->target,
@@ -47,15 +47,16 @@ class ConfigController extends Controller
 
         $valid = $validator->valid();
 
-        $config = Config::firstOrCreate(['user_id' => $request->user()->id])->refresh();
+        $config = Config::forUser($request->user()->id);
 
         $config->sex = $valid['sex'];
         $config->height = round($valid['height'] * 2.54, 2);
-        $config->weight = round($valid['weight'] / 2.204623, 2);
         $config->birthdate = $valid['birthdate'];
         $config->exercise = $valid['exercise'];
         $config->target = $valid['target'];
         $config->save();
+
+        $config->weights()->create(['weight' => round($valid['weight'] / 2.204623, 2)]);
 
         return ['status' => 'success'];
     }

@@ -15,14 +15,13 @@ return new class extends Migration
         Schema::create('configs', function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(User::class)
+                ->unique()
                 ->constrained()
                 ->onDelete('cascade');
             $table->string('sex')
                 ->default('m');
             $table->decimal('height', 8, 2)
                 ->default(172.72);
-            $table->decimal('weight', 8, 2)
-                ->default(81.65);
             $table->date('birthdate')
                 ->default('1996-07-16');
             $table->integer('exercise')

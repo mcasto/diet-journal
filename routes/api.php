@@ -5,6 +5,7 @@ use App\Http\Controllers\CaloriesController;
 use App\Http\Controllers\ConfigController;
 use App\Http\Controllers\FoodController;
 use App\Http\Controllers\RecipesController;
+use App\Http\Controllers\WeightController;
 use App\Models\Config;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -41,16 +42,18 @@ Route::controller(CaloriesController::class)
 ;
 
 Route::middleware('auth:sanctum')->get('/weight', function (Request $request) {
-    $config = Config::firstOrCreate(['user_id' => $request->user()->id])->refresh();
+    $config = Config::forUser($request->user()->id);
 
     return [
         'status' => 'success',
-        'weight' => round($config->weight * 2.204623),
+        'weight' => round($config->latestWeight->weight * 2.204623),
         'target' => $config->target,
     ];
 });
 
 Route::middleware("auth:sanctum")->get('/calories/remaining', [CaloriesController::class, 'remaining']);
+
+Route::middleware("auth:sanctum")->get('/weights', [WeightController::class, 'index']);
 
 Route::controller(ConfigController::class)
     ->prefix('/profile')

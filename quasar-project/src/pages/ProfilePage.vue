@@ -66,12 +66,18 @@
         </div>
       </div>
     </q-form>
+
+    <div class="q-px-md q-pt-lg" style="max-width: 640px;">
+      <div class="text-subtitle1 q-mb-sm">Weight History</div>
+      <WeightChart :data="weightHistory" />
+    </div>
   </div>
 </template>
 
 <script setup>
 import { Notify } from "quasar";
 import callApi from "src/assets/call-api";
+import WeightChart from "components/WeightChart.vue";
 import { useStore } from "src/stores/store";
 import { computed, onMounted, ref } from "vue";
 
@@ -80,6 +86,7 @@ const store = useStore();
 const profile = ref(null);
 const exerciseLevels = ref([]);
 const targets = ref([]);
+const weightHistory = ref([]);
 
 const sexOptions = [
   { label: "Male", value: "m" },
@@ -164,5 +171,15 @@ onMounted(async () => {
     exercise: response.exercise,
     target: response.target,
   };
+
+  const weightsResponse = await callApi({
+    path: "/weights",
+    method: "get",
+    useAuth: true,
+  });
+
+  if (weightsResponse.status == "success") {
+    weightHistory.value = weightsResponse.data;
+  }
 });
 </script>

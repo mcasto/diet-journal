@@ -38,13 +38,16 @@ class CaloriesController extends Controller
         }
     }
 
-    private function bmr(Config $config)
+    private function bmr(Config $config, Carbon $date)
     {
         $globalConfig = json_decode(Storage::disk('local')->get('global-config.json'));
 
+        $weight = $config->weightAsOf($date);
+        $age = $config->ageAsOf($date);
+
         // BMR = 10W + 6.25H - 5A + 5
 
-        $base = floor((10 * $config->weight) + (6.25 * $config->height) - (5 * $config->age) + 5);
+        $base = floor((10 * $weight->weight) + (6.25 * $config->height) - (5 * $age) + 5);
 
         $bmr = $base * $globalConfig->exerciseLevels[$config->exercise];
 
@@ -53,21 +56,23 @@ class CaloriesController extends Controller
 
     public function remaining(Request $request)
     {
-        $config = Config::firstOrCreate(['user_id' => $request->user()->id])->refresh();
+        $config = Config::forUser($request->user()->id);
 
         $timezone = 'America/Guayaquil';
-        $today = Carbon::now($timezone);
+        $date = $request->filled('date')
+            ? Carbon::parse($request->input('date'), $timezone)
+            : Carbon::now($timezone);
 
         $calorieMap = Calorie::get(['consumed', 'calories'])
             ->keyBy(fn($c) => mb_strtolower($c->consumed));
 
         $totalCalories = Food::whereBetween('consumed_at', [
-            $today->copy()->startOfDay()->setTimezone('UTC'),
-            $today->copy()->endOfDay()->setTimezone('UTC'),
+            $date->copy()->startOfDay()->setTimezone('UTC'),
+            $date->copy()->endOfDay()->setTimezone('UTC'),
         ])
             ->get()
             ->sum(fn($food) => optional($calorieMap->get(mb_strtolower($food->consumed)))->calories ?? 0);
 
-        return $this->bmr($config) - $totalCalories;
+        return $this->bmr($config, $date) - $totalCalories;
     }
 }
