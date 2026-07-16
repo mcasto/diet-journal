@@ -62,7 +62,7 @@
     </q-table>
 
     <div class="text-h6 q-mt-md flex justify-between q-mx-lg">
-      <div>Daily Calories: {{ dailyCalories }} cal</div>
+      <div>Calories Consumed: {{ dailyCalories }} cal</div>
       <div class="row items-center">Current Weight: {{ weight }} lbs</div>
       <div>Remaining Calories: {{ remaining }} cal</div>
     </div>
