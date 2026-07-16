@@ -1,0 +1,4 @@
+{
+  "exerciseLevels": [1.2, 1.375, 1.465, 1.55, 1.725, 1.9],
+  "targets": { "loss": 0.9, "maintenance": 1 }
+}

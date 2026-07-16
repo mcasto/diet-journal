@@ -163,7 +163,7 @@ const fetchRemaining = async () => {
 
 const fetchWeight = async () => {
   const response = await callApi({
-    path: "/weight",
+    path: `/weight?date=${filterDate.value}`,
     method: "get",
     useAuth: true,
   });
@@ -174,6 +174,7 @@ const fetchWeight = async () => {
 const onFilterDateChange = () => {
   onRequest({ pagination: { ...pagination.value, page: 1 } });
   fetchRemaining();
+  fetchWeight();
 };
 
 const shiftFilterDate = (days) => {

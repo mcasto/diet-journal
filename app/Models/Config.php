@@ -38,24 +38,27 @@ class Config extends Model
     }
 
     /**
-     * All logged weights except the very first, which is the default
-     * assigned when the config was created (never a real reading).
+     * All logged weights except the very first ever inserted (the lowest
+     * id), which is the default assigned when the config was created and
+     * never a real reading. Identified by id rather than created_at since
+     * a real entry can be backdated earlier than the default's timestamp.
      */
     public function loggedWeights()
     {
+        $firstId = $this->weights()->min('id');
+
         return $this->weights()
+            ->where('id', '!=', $firstId)
             ->orderBy('created_at')
             ->orderBy('id')
-            ->get()
-            ->skip(1)
-            ->values();
+            ->get();
     }
 
     /**
      * The weight in effect on a given date: the most recent logged weight
-     * on or before that date, falling back to the earliest logged weight
-     * if the date predates all of them, and to the default weight if
-     * nothing has been logged yet at all.
+     * on or before the end of that date, falling back to the earliest
+     * logged weight if the date predates all of them, and to the default
+     * weight if nothing has been logged yet at all.
      */
     public function weightAsOf(Carbon $date)
     {
@@ -65,7 +68,9 @@ class Config extends Model
             return $this->latestWeight;
         }
 
-        return $weights->filter(fn($w) => $w->created_at->lte($date))->last() ?? $weights->first();
+        $cutoff = $date->copy()->endOfDay();
+
+        return $weights->filter(fn($w) => $w->created_at->lte($cutoff))->last() ?? $weights->first();
     }
 
     public function ageAsOf(Carbon $date)

@@ -7,6 +7,7 @@ use App\Http\Controllers\FoodController;
 use App\Http\Controllers\RecipesController;
 use App\Http\Controllers\WeightController;
 use App\Models\Config;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -44,9 +45,14 @@ Route::controller(CaloriesController::class)
 Route::middleware('auth:sanctum')->get('/weight', function (Request $request) {
     $config = Config::forUser($request->user()->id);
 
+    $timezone = 'America/Guayaquil';
+    $date = $request->filled('date')
+        ? Carbon::parse($request->input('date'), $timezone)
+        : Carbon::now($timezone);
+
     return [
         'status' => 'success',
-        'weight' => round($config->latestWeight->weight * 2.204623),
+        'weight' => round($config->weightAsOf($date)->weight * 2.204623),
         'target' => $config->target,
     ];
 });
