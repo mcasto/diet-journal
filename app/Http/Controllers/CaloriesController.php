@@ -45,9 +45,9 @@ class CaloriesController extends Controller
         $weight = $config->weightAsOf($date);
         $age = $config->ageAsOf($date);
 
-        // BMR = 10W + 6.25H - 5A + 5
+        $base = floor((10 * $weight->weight) + (6.25 * $config->height) - (5 * $age));
 
-        $base = floor((10 * $weight->weight) + (6.25 * $config->height) - (5 * $age) + 5);
+        $base += $config->sex == 'm' ? 5 : -161;
 
         $bmr = $base * $globalConfig->exerciseLevels[$config->exercise];
 
