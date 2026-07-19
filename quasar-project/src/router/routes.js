@@ -50,6 +50,7 @@ const routes = [
           }
 
           store.food = response.data;
+          store.scrappedDates = response.scrapped_dates;
         },
       },
     ],

@@ -29,42 +29,58 @@
         ></q-btn>
 
         <q-btn icon="add" class="q-ml-md" :to="{ name: 'edit' }"></q-btn>
+
+        <q-btn
+          :icon="scrapped ? 'restore' : 'delete_sweep'"
+          :label="scrapped ? 'Un-scrap Day' : 'Scrap Day'"
+          flat
+          class="q-ml-md"
+          @click="scrapped ? unscrapDay() : promptScrapDay()"
+        ></q-btn>
       </div>
     </q-toolbar>
-    <q-table
-      :rows="rows"
-      :columns="columns"
-      :loading="loading"
-      v-model:pagination="pagination"
-      row-key="id"
-      @request="onRequest"
-    >
-      <template #body="props">
-        <q-tr
-          :props="props"
-          :class="{
-            'bg-warning':
-              props.row.calories === null || props.row.calories === undefined,
-          }"
-        >
-          <q-td v-for="col in props.cols" :key="col.name" :props="props">
-            <template v-if="col.name === 'tools'">
-              <q-btn icon="delete" @click="deleteEntry(props.row)"></q-btn>
-              <q-btn
-                icon="edit"
-                :to="{ name: 'edit', params: { id: props.row.id } }"
-              ></q-btn>
-            </template>
-            <template v-else>{{ col.value }}</template>
-          </q-td>
-        </q-tr>
-      </template>
-    </q-table>
 
-    <div class="text-h6 q-mt-md flex justify-between q-mx-lg">
-      <div>Calories Consumed: {{ dailyCalories }} cal</div>
-      <div class="row items-center">Current Weight: {{ weight }} lbs</div>
-      <div>Remaining Calories: {{ remaining }} cal</div>
+    <template v-if="!scrapped">
+      <q-table
+        :rows="rows"
+        :columns="columns"
+        :loading="loading"
+        v-model:pagination="pagination"
+        row-key="id"
+        @request="onRequest"
+      >
+        <template #body="props">
+          <q-tr
+            :props="props"
+            :class="{
+              'bg-warning':
+                props.row.calories === null || props.row.calories === undefined,
+            }"
+          >
+            <q-td v-for="col in props.cols" :key="col.name" :props="props">
+              <template v-if="col.name === 'tools'">
+                <q-btn icon="delete" @click="deleteEntry(props.row)"></q-btn>
+                <q-btn
+                  icon="edit"
+                  :to="{ name: 'edit', params: { id: props.row.id } }"
+                ></q-btn>
+              </template>
+              <template v-else>{{ col.value }}</template>
+            </q-td>
+          </q-tr>
+        </template>
+      </q-table>
+
+      <div class="text-h6 q-mt-md flex justify-between q-mx-lg">
+        <div>Calories Consumed: {{ dailyCalories }} cal</div>
+        <div class="row items-center">Current Weight: {{ weight }} lbs</div>
+        <div>Remaining Calories: {{ remaining }} cal</div>
+      </div>
+    </template>
+
+    <div v-else class="text-h6 text-grey q-pa-xl text-center">
+      This day was scrapped.
+      <div v-if="scrapReason" class="text-subtitle1 q-mt-sm">{{ scrapReason }}</div>
     </div>
   </div>
 </template>
@@ -79,7 +95,7 @@ import {
   isToday,
   parseISO,
 } from "date-fns";
-import { Notify } from "quasar";
+import { Dialog, Notify } from "quasar";
 import callApi from "src/assets/call-api";
 import { computed, onMounted, ref } from "vue";
 
@@ -90,6 +106,8 @@ const loading = ref(false);
 const dailyCalories = ref(0);
 const remaining = ref(0);
 const weight = ref(null);
+const scrapped = ref(false);
+const scrapReason = ref(null);
 const pagination = ref({
   page: 1,
   rowsPerPage: 10,
@@ -146,6 +164,8 @@ const onRequest = async ({ pagination: requested }) => {
 
   rows.value = response.data;
   dailyCalories.value = response.daily_calories;
+  scrapped.value = response.scrapped;
+  scrapReason.value = response.scrap_reason;
   pagination.value = {
     page: response.current_page,
     rowsPerPage: response.per_page,
@@ -189,6 +209,69 @@ onMounted(() => {
   fetchRemaining();
   fetchWeight();
 });
+
+const promptScrapDay = () => {
+  Dialog.create({
+    title: "Scrap this day",
+    message: "Why are you scrapping this day? (optional)",
+    prompt: {
+      model: "",
+      type: "text",
+    },
+    cancel: true,
+    persistent: true,
+  }).onOk(async (reason) => {
+    const response = await callApi({
+      path: "/scrapped-days",
+      method: "post",
+      payload: { date: filterDate.value, reason: reason || null },
+      useAuth: true,
+    });
+
+    if (response.status != "success") {
+      Notify.create({
+        type: "negative",
+        position: "center",
+        message: response.message || "Unable to scrap day.",
+      });
+      return;
+    }
+
+    onRequest({ pagination: pagination.value });
+  });
+};
+
+const unscrapDay = () => {
+  Notify.create({
+    type: "warning",
+    position: "center",
+    message: "Un-scrap this day?",
+    actions: [
+      { label: "No" },
+      {
+        label: "Yes",
+        handler: async () => {
+          const response = await callApi({
+            path: `/scrapped-days/${filterDate.value}`,
+            method: "delete",
+            useAuth: true,
+          });
+
+          if (response.status != "success") {
+            Notify.create({
+              position: "center",
+              type: "negative",
+              message: response.message,
+            });
+            return;
+          }
+
+          onRequest({ pagination: pagination.value });
+        },
+      },
+    ],
+  });
+};
 
 const deleteEntry = async (row) => {
   Notify.create({

@@ -5,6 +5,7 @@ use App\Http\Controllers\CaloriesController;
 use App\Http\Controllers\ConfigController;
 use App\Http\Controllers\FoodController;
 use App\Http\Controllers\RecipesController;
+use App\Http\Controllers\ScrappedDayController;
 use App\Http\Controllers\WeightController;
 use App\Models\Config;
 use Carbon\Carbon;
@@ -67,6 +68,15 @@ Route::controller(ConfigController::class)
     ->group(function () {
         Route::get('', 'show');
         Route::put('', 'update');
+    })
+;
+
+Route::controller(ScrappedDayController::class)
+    ->prefix('/scrapped-days')
+    ->middleware("auth:sanctum")
+    ->group(function () {
+        Route::post('', 'store');
+        Route::delete('{date}', 'destroy');
     })
 ;
 

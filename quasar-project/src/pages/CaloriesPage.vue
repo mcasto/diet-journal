@@ -263,9 +263,11 @@ const averageDailyIntake = computed(() => {
     formatISO9075(new Date(item.consumed_at), { representation: "date" }),
   );
 
-  const dailyTotals = Object.values(byDay).map((entries) =>
-    entries.reduce((sum, entry) => sum + entry.calories, 0),
-  );
+  const scrappedDates = new Set(store.scrappedDates || []);
+
+  const dailyTotals = Object.entries(byDay)
+    .filter(([date]) => !scrappedDates.has(date))
+    .map(([, entries]) => entries.reduce((sum, entry) => sum + entry.calories, 0));
 
   if (!dailyTotals.length) {
     return 0;

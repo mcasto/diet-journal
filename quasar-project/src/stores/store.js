@@ -13,6 +13,7 @@ export const useStore = defineStore(
         token: null,
       }),
       food: ref(null),
+      scrappedDates: ref([]),
     };
     const getters = {};
     const actions = {};

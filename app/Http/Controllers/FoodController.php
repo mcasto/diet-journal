@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Calorie;
 use App\Models\Food;
+use App\Models\ScrappedDay;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
@@ -57,7 +58,12 @@ class FoodController extends Controller
                     ->get()
                     ->map(fn($rec) => $this->formatFood($rec, $calorieMap));
 
-                return ['status' => 'success', 'data' => $data];
+                $scrappedDates = ScrappedDay::where('user_id', $request->user()->id)
+                    ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
+                    ->get()
+                    ->map(fn($rec) => $rec->date->toDateString());
+
+                return ['status' => 'success', 'data' => $data, 'scrapped_dates' => $scrappedDates];
             }
 
             // Day mode (Food Log): defaults to today, paginated. Pulled as a
@@ -86,9 +92,15 @@ class FoodController extends Controller
                 $page,
             );
 
+            $scrappedDay = ScrappedDay::where('user_id', $request->user()->id)
+                ->whereDate('date', $date->toDateString())
+                ->first();
+
             return [
                 'status' => 'success',
                 'daily_calories' => $dailyCalories,
+                'scrapped' => (bool) $scrappedDay,
+                'scrap_reason' => $scrappedDay->reason ?? null,
                 ...$paginator->toArray(),
             ];
         } catch (Exception $e) {
