@@ -256,7 +256,8 @@ const averageDailyIntake = computed(() => {
     (item) =>
       new Date(item.consumed_at) >= cutoff &&
       item.calories !== null &&
-      item.calories !== undefined,
+      item.calories !== undefined &&
+      item.consumed.toLowerCase() !== "check calories",
   );
 
   const byDay = groupBy(logged, (item) =>
